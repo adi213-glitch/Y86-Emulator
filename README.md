@@ -187,7 +187,7 @@ nop                   # No operation
 
 
 ## Complete Example Program
-
+```
 #### Array sum program
     .pos 0
 init:
@@ -228,7 +228,7 @@ done:
 
     .pos 0x200
 stack:
-
+```
 ### Assemble and run:
 
 `yas array_sum.ys`
