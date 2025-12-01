@@ -1,0 +1,19 @@
+# Compiled executables
+y86
+y86.exe
+*.exe
+*.out
+
+# Object files
+*.o
+*.obj
+
+# VS Code settings (optional - you have .vscode already)
+# .vscode/
+
+# Assembled object code (optional - keep .yo for examples)
+# *.yo
+
+# OS files
+.DS_Store
+Thumbs.db
