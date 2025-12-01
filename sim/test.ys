@@ -1,3 +1,0 @@
-.pos 0
-irmovq $55, %rax
-halt

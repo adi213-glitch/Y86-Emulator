@@ -30,10 +30,13 @@ bool Y86Emulator::load_program(const std::string& filename) {
         int i =0 ;
         std::string address="";
         size_t l_size = line.size();
-        while(i < l_size && line[i]!=':'){
-            address+= line[i++];
+        while(i < l_size && line[i]!=':' && line[i]!='|'){
+            if(line[i]!=' ') {  // ensrue no spaces come in data
+                address+=line[i];
+            }
+            i++;
         }
-        if(i==l_size) continue;
+        if(i==l_size || address.empty()) continue;
         i++; // found the ':'
 
         // 2. Find the data (after the ':')
@@ -64,7 +67,7 @@ bool Y86Emulator::load_program(const std::string& filename) {
     return true;
 }
 void Y86Emulator::run() {
-    // The "Game Loop": Keep running as long as status is AOK
+    // The "main Loop": Keep running as long as status is AOK
     while (status == AOK) {
         
         //  STAGE 1: FETCH 
@@ -72,19 +75,28 @@ void Y86Emulator::run() {
         // TODO 1: Read the instruction byte from memory at the current PC.
         
         // Safety:  we might want to check if pc < MEM_SIZE first.
-        if(pc >= MEM_SIZE) status = ADR;// imem_error
+        if(pc >= MEM_SIZE) {
+            status = ADR;// imem_error
+            break;
+        }
         uint8_t instruction_byte = memory[pc];
 
         // TODO 2: Extract 'icode' (High 4 bits) and 'ifun' (Low 4 bits)
-        // Hint for icode: You need to "shift" the bits to the right.
+        // Hint for icode: we need to "shift" the bits to the right.
 
-        // Hint for ifun: You need to "mask" the bits using the & operator.
-        // Remember: 0xF is the mask for 1111 (4 bits).
+        // Hint for ifun: we need to "mask" the bits using the & operator.
+        // 0xF is the mask for 1111 (4 bits).
         int icode = (instruction_byte>>4)  & 0xF;
         int ifun  = instruction_byte & 0xF;
-
-        // 2. Control Signal: Does this instruction need a register byte?
-        // Look at CS:APP Figure 4.2 (Instruction Encodings).
+        if(icode > 0xB || icode <0) {
+            status= INS;
+            break;
+        }
+        if (icode == 0) { 
+            status = HLT;
+            break;
+        }
+        // 2. Control Signal
         // True for: rrmovq, irmovq, rmmovq, mrmovq, OPq, pushq, popq.
         // False for: halt, nop, jXX, call, ret.
         bool need_regids = false;
@@ -94,9 +106,10 @@ void Y86Emulator::run() {
                 break;
             default:
                 need_regids = false;
+                break;
         }
 
-        // 3. Control Signal: Does this instruction need a constant valC?
+        // 3. Control Signal
         // True for: irmovq, rmmovq, mrmovq, jXX, call.
         bool need_valC =false;
         switch (icode){
@@ -106,6 +119,7 @@ void Y86Emulator::run() {
         
         default:
             need_valC=false;
+            break;
         }
 
         // 4. Variables to hold the fetched data
@@ -118,6 +132,10 @@ void Y86Emulator::run() {
 
         // 5. Read Register Byte (if needed)
         if (need_regids) {
+            if(current_offset>=MEM_SIZE){// for safety
+                status= ADR;
+                break;
+            }
             // TODO: Read the byte at 'memory[current_offset]'
             // TODO: Split it: High 4 bits -> rA, Low 4 bits -> rB
             uint8_t reg_byte = memory[current_offset];
@@ -128,9 +146,12 @@ void Y86Emulator::run() {
 
         // 6. Read Constant valC (if needed)
         if (need_valC) {
+            if(current_offset>=MEM_SIZE){// for safety
+                status= ADR;
+                break;
+            }
             // TODO: Read 8 bytes from 'memory[current_offset]'
-            // Warning: Y86 is Little Endian. we must reconstruct the uint64_t.
-            // Hint: can use a loop or bitwise shifts (byte | byte<<8 | byte<<16...)
+            // Y86 is Little Endian. we must reconstruct the uint64_t.
             for(int i =0 ; i<8; i++){
                 uint8_t single_byte = memory[current_offset+i];
                 uint64_t masked_byte = (uint64_t)single_byte <<56;
@@ -141,7 +162,7 @@ void Y86Emulator::run() {
             current_offset += 8; // Move past the 8 bytes
         }
 
-        // 7. Calculate valP (Address of next instruction)
+        // 7. Calculate valP (Address of next sequential instruction)
         // In hardware, valP is literally PC + 1 + (1 if regids) + (8 if valC)
         uint64_t valP = current_offset;
 
@@ -171,6 +192,7 @@ void Y86Emulator::run() {
             srcB = RSP;
             break;
         default:
+            srcB= RNONE;
             break;
         }
         //access reg file
@@ -188,13 +210,13 @@ void Y86Emulator::run() {
             AluA=valA;
             break;
         case 3 : case 4 : case 5:
-            AluB= valC;
+            AluA= valC;
             break;
         case 8 :case 0xA:
             AluA=-8;
             break;
         case 9: case 0xB:
-            AluB= 8;
+            AluA= 8;
             break;
         default:
             break;
@@ -213,91 +235,302 @@ void Y86Emulator::run() {
         if(icode == 6){
             switch(ifun){
                 case 0:
-                    valE= valA + valB;
+                    valE= AluA + AluB;
                     break;
                 case 1 : 
-                    valE = valA-valB;
+                    valE = AluB-AluA;
                     break;
                 case 2:
-                    valE= valA & valB;
+                    valE= AluA & AluB;
                     break;
                 case 3:
-                    valE = valA ^ valB;
+                    valE = AluA ^ AluB;
                     break;
                 default :
                     break;
             }
         }else{
-            valE= valA+valB;
+            valE= AluA+AluB;
         }
-        // do we need to update cc reg
-        bool set_cc = (icode ==6);
-
         
+        // Update Condition Codes (Only for OPq)
+        if (icode == 6) {
+            cc.zf = (valE == 0);
+            cc.sf = ((int64_t)valE < 0); // Check the sign bit (easier with cast)
 
+            // signed Overflow Logic
+            // For ADD (ifun 0): Overflow if (A>0, B>0, Res<0) OR (A<0, B<0, Res>0)
+            // For SUB (ifun 1): Overflow if (A<0, B>0, Res<0) OR (A>0, B<0, Res>0)
+            // It's simpler to ask: Did the sign flip unexpectedly?
+            
+            bool a_neg = ((int64_t)valA < 0);
+            bool b_neg = ((int64_t)valB < 0);
+            bool e_neg = ((int64_t)valE < 0);
 
+            if (ifun == 0) { // ADD
+                cc.of = (a_neg == b_neg) && (a_neg != e_neg);
+            } else if (ifun == 1) { // SUB
+                cc.of = (a_neg != b_neg) && (a_neg == e_neg);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // DEBUG: Print what we found so you can verify
-        std::cout << "PC: 0x" << std::hex << pc 
-                  << " | Byte: " << (int)instruction_byte
-                  << " | icode: " << icode 
-                  << " ifun: " << ifun << "\n";
-
-        // --- STAGE 6: PC UPDATE (Temporary) ---
-        // TODO 3: Increment the PC.
-        // For now, just add 1 to it. Later we will calculate the real length.
-        pc=valP;
-
-        // --- STOPPING CONDITION ---
-        // TODO 4: Check if we hit the Halt instruction.
-        // In Y86, Halt is icode 0. If you see it, change 'status' to HLT.
-        if (icode == 0) {
-            status = HLT;
+            } else {
+                cc.of = false; // Logic operations (AND/XOR) never overflow
+            }
         }
+        // test cc logic 
+        bool cnd = 0;
+        if(icode ==7 || icode ==2){
+            switch (ifun) {
+                case 0 :
+                    cnd =1;
+                    break;
+                case 1:
+                    cnd = (cc.sf ^ cc.of) | cc.zf;
+                    break;
+                case 2 :
+                    cnd = cc.sf ^ cc.of;
+                    break;
+                case 3:
+                    cnd = cc.zf;
+                    break;
+                case 4:
+                    cnd = !cc.zf;
+                    break;
+                case 5:
+                    cnd = !(cc.sf ^ cc.of);
+                    break;
+                case 6 :
+                    cnd = !(cc.sf ^ cc.of) & !cc.zf;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+
+
+        //---stage 4 memory---
+        uint64_t mem_addr = valA;
+        uint64_t mem_data = valA;
+        //set mem_addr
+        switch (icode){
+        case 4 :case 5:case 8 : case 0xA:
+            mem_addr=valE;
+            break;
+        case 9: case 0xB:
+            mem_addr=valA;
+            break;
+        default:
+            break;
+        }
+        //set mem_data
+        switch (icode){
+        case 4 :case 0xA:
+            mem_data=valA;
+            break;
+        case 8:
+            mem_data=valP;
+            break;
+        default:
+            break;
+        }
+        bool mem_read =0, mem_write=0;
+        switch(icode){
+            case 5: case 9 : case 0xB:
+                mem_read=1;
+                break;
+            default: 
+                mem_read = 0; 
+                break;
+        }
+        switch(icode){
+            case 4: case 8 : case 0xA:
+                mem_write=1;
+                break;
+            default: 
+                mem_write= 0; 
+                break;
+        }
+
+        // Only check memory bounds if we're actually doing memory operations
+        if((mem_read || mem_write) && (mem_addr >= MEM_SIZE || mem_addr + 7 >= MEM_SIZE)) {
+            status=ADR;
+            break;
+        }
+
+        uint64_t valM = 0;
+        // Memory Read
+        if (mem_read) {
+            
+            for(int i =0 ; i<8; i++){
+                uint8_t single_byte = memory[mem_addr+i];
+                uint64_t masked_byte = (uint64_t)single_byte <<56;
+                valM >>= 8;
+                valM = valM | masked_byte;
+            }
+        }
+        // Memory Write
+        else if (mem_write) {
+            for (int i = 0; i < 8; i++) {
+                memory[mem_addr + i] = (mem_data >> (i * 8)) & 0xFF; // Extract byte and write it one by one
+            }
+        }
+        //---stage 5 writeback---
+
+        uint64_t dstE=rB;
+        uint64_t dstM=rA; 
+        //logic for dste (also handles cmovxx)
+        switch(icode){
+            case 2 :
+                if(cnd){
+                    dstE=rB;
+                    break;
+                }
+                dstE = RNONE;
+                break;
+            case 3: case 6:
+                dstE=rB;
+                break;
+            case 8: case 9:case 0xA: case 0xB:
+                dstE=RSP;
+                break;
+            default:
+                dstE= RNONE;
+                break;
+        }
+        //logic for dstm
+        switch(icode){
+            case 5 : case 0xB:
+                dstM= rA;
+                break;
+            default : 
+                dstM = RNONE;
+                break;
+        }
+        if(dstE != RNONE) registers[dstE]= valE;
+        if(dstM != RNONE) registers[dstM]=valM;
+
+
+        //---stage 6 pc update---
+
+        switch(icode){
+            case 8: 
+                pc = valC;
+                break;
+            case 7: 
+                if(cnd) pc = valC;
+                else pc = valP;
+                break;
+            case 9:
+                pc = valM;
+                break;
+            default:
+                pc = valP;
+                break;
+        }
+        
     }
 }
-// Debug Helper (I'll give you this one for free so you can test)
+// Debug Helper 
 void Y86Emulator::dump_state() {
+    std::cout << "\n========== CPU State ==========\n";
     std::cout << "PC: 0x" << std::hex << pc << std::dec << "\n";
-    std::cout << "Stat: " << status << "\n";
-    std::cout << "Registers:\n";
-    for (int i = 0; i < 15; i++) {
-        std::cout << "%r" << i << ": 0x" << std::hex << registers[i] << "\n";
+    
+    // Status with name
+    std::cout << "Stat: " << status;
+    switch(status) {
+        case AOK: std::cout << " (AOK - Running)\n"; break;
+        case HLT: std::cout << " (HLT - Halted)\n"; break;
+        case ADR: std::cout << " (ADR - Address Error)\n"; break;
+        case INS: std::cout << " (INS - Invalid Instruction)\n"; break;
+        default: std::cout << " (Unknown)\n";
     }
-    std::cout << std::dec; // Reset to decimal
+    
+    // Condition codes
+    std::cout << "Condition Codes: ZF=" << cc.zf 
+              << " SF=" << cc.sf 
+              << " OF=" << cc.of << "\n";
+    
+    std::cout << "\nRegisters:\n";
+    const char* reg_names[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
+                                "r8 ", "r9 ", "r10", "r11", "r12", "r13", "r14"};
+    for (int i = 0; i < 15; i++) {
+        std::cout << "  %" << reg_names[i] << ": 0x" 
+                  << std::hex << std::setw(16) << std::setfill('0') 
+                  << registers[i] << std::dec;
+        if (registers[i] != 0) {
+            std::cout << " (" << std::dec << (int64_t)registers[i] << ")";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "==============================\n\n";
 }
+void Y86Emulator::dump_memory(uint64_t start, uint64_t end) {
+    std::cout << "\n========== Memory Dump ==========\n";
+    for (uint64_t addr = start; addr <= end && addr < MEM_SIZE; addr += 8) {
+        std::cout << "0x" << std::hex << std::setw(4) << std::setfill('0') << addr << ": ";
+        for (int i = 0; i < 8 && addr + i < MEM_SIZE; i++) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') 
+                      << (int)memory[addr + i] << " ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << std::dec << "=================================\n\n";
+}
+
 
 // Main function to run the whole thing
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cout << "Usage: ./y86 <file.yo>\n";
+        std::cout << "Usage: ./y86 <file.yo> [options]\n";
+        std::cout << "Options:\n";
+        std::cout << "  -m <start> <end>  : Dump memory from start to end address (hex)\n";
+        std::cout << "  -m data           : Dump data area (0x000-0x100)\n";
+        std::cout << "  -m all            : Dump all modified memory\n";
+        std::cout << "\nExample: ./y86 test.yo -m 0x100 0x200\n";
         return 1;
     }
 
     Y86Emulator cpu;
     if (cpu.load_program(argv[1])) {
         std::cout << "Program loaded.\n";
-
+        
         cpu.run();
-
-        cpu.dump_state(); // Check if memory loaded correctly? (Wait, this dumps registers)
-        // You might want to print a specific memory address here to verify TASK 1.
+        
+        cpu.dump_state();
+        
+        // Parse memory dump options
+        if (argc >= 3 && std::string(argv[2]) == "-m") {
+            if (argc >= 4) {
+                std::string option = argv[3];
+                
+                if (option == "data") {
+                    std::cout << "\n=== Data Area ===\n";
+                    cpu.dump_memory(0x000, 0x100);
+                }
+                else if (option == "all") {
+                    std::cout << "\n=== All Memory ===\n";
+                    cpu.dump_memory(0x000, 0x1000);
+                }
+                else if (argc >= 5) {
+                    // Custom range: -m 0x100 0x200
+                    uint64_t start = std::stoul(argv[3], nullptr, 16);
+                    uint64_t end = std::stoul(argv[4], nullptr, 16);
+                    std::cout << "\n=== Memory Range 0x" << std::hex << start 
+                              << " - 0x" << end << std::dec << " ===\n";
+                    cpu.dump_memory(start, end);
+                }
+            }
+        }
+        
     } else {
         std::cout << "Failed to load program.\n";
     }
-
+    
     return 0;
 }
+// ./y86 test.yo                  # No memory dump
+// ./y86 test.yo -m data            # Dump data area
+// ./y86 test.yo -m all             # Dump all memory
+// ./y86 test.yo -m 0x100 0x200     # Custom range
+

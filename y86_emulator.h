@@ -8,7 +8,7 @@
 
 const int MEM_SIZE = 0x10000;
 
-// --- SYSTEM TYPES (The "Vocabulary" of the Hardware) ---
+// --- SYSTEM TYPES  ---
 
 // 1. Register IDs
 // 'enum' gives English names to the numbers 0-14.
@@ -25,7 +25,7 @@ enum Stat{
     INS = 4  // Invalid Instruction
 };
 // 3. Condition Codes
-// We bundle the 3 flags into a simple struct.
+// bundle the 3 flags into a simple struct.
 struct ConditionCodes {
     bool zf; // Zero Flag
     bool sf; // Sign Flag
@@ -39,7 +39,7 @@ private:
     
     // Memory: A vector of bytes. 
     // uint8_t = "Unsigned Integer 8-bit" (exactly 1 byte).
-    // In DSA you'd use vector<char>, but uint8_t is more precise for hardware.
+    // could also use vector<char>, but uint8_t is more precise for hardware.
     std::vector<uint8_t> memory; 
 
     // Register File: Array of 16 values.
@@ -60,17 +60,20 @@ public:
     // Constructor: Initializes the machine (clears memory, resets PC)
     Y86Emulator();
 
-    // == THE LOADER (Your First Task) ==
+    // == THE LOADER  ==
     // Reads a .yo file and fills the 'memory' vector.
     // Returns true if successful, false if file error.
     bool load_program(const std::string& filename);
 
-    // == THE ENGINE (Your Second Task) ==
+    // == THE ENGINE  ==
     // Runs the processor loop until status is not AOK.
     void run();
     
-    // Debug helper: Print current state of registers
+    // Debug helper: Print current state of registers and memory
     void dump_state();
+
+    void dump_memory(uint64_t start, uint64_t end);
+
 };
-// Add the missing #endif to close the include guard
+
 #endif

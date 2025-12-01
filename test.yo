@@ -1,0 +1,88 @@
+                            | # Comprehensive Y86 test program
+                            | # Tests: conditional moves, branches, ALU ops, stack, memory
+                            | 
+0x000:                      |     .pos 0
+0x000:                      | init:
+0x000: 30f40010000000000000 |     irmovq stack, %rsp      # Initialize stack pointer
+0x00a: 800002000000000000   |     call main
+0x013: 00                   |     halt
+                            | 
+                            | # Test data in memory
+0x100:                      |     .pos 0x100
+0x100:                      | data1:
+0x100: 1111000000000000     |     .quad 0x1111
+0x108:                      | data2:
+0x108: 2222000000000000     |     .quad 0x2222
+                            | 
+                            | # Main test function
+0x200:                      |     .pos 0x200
+0x200:                      | main:
+0x200: a05f                 |     pushq %rbp
+0x202: 2045                 |     rrmovq %rsp, %rbp
+                            |     
+                            |     # Test 1: Basic arithmetic
+0x204: 30f06400000000000000 |     irmovq $100, %rax       # rax = 100
+0x20e: 30f33200000000000000 |     irmovq $50, %rbx        # rbx = 50
+0x218: 6030                 |     addq %rbx, %rax         # rax = 150
+0x21a: 6130                 |     subq %rbx, %rax         # rax = 100
+                            |     
+                            |     # Test 2: Conditional move (should move)
+0x21c: 30f10000000000000000 |     irmovq $0, %rcx
+0x226: 30f2e703000000000000 |     irmovq $999, %rdx
+0x230: 6111                 |     subq %rcx, %rcx         # Set ZF=1
+0x232: 2321                 |     cmove %rdx, %rcx        # rcx should become 999 (ZF=1)
+                            |     
+                            |     # Test 3: Conditional move (should NOT move)
+0x234: 30f60903000000000000 |     irmovq $777, %rsi
+0x23e: 30f77803000000000000 |     irmovq $888, %rdi
+0x248: 30f80100000000000000 |     irmovq $1, %r8
+0x252: 6188                 |     subq %r8, %r8           # r8 = 0, ZF=1
+0x254: 6088                 |     addq %r8, %r8           # r8 = 0, ZF=1
+0x256: 30f90500000000000000 |     irmovq $5, %r9
+0x260: 6098                 |     addq %r9, %r8           # r8 = 5, ZF=0
+0x262: 2376                 |     cmove %rdi, %rsi        # rsi should stay 777 (ZF=0)
+                            |     
+                            |     # Test 4: Memory operations
+0x264: 30fa0001000000000000 |     irmovq data1, %r10
+0x26e: 50ba0000000000000000 |     mrmovq (%r10), %r11     # r11 = 0x1111
+0x278: 30fc0801000000000000 |     irmovq data2, %r12
+0x282: 50dc0000000000000000 |     mrmovq (%r12), %r13     # r13 = 0x2222
+0x28c: 60bd                 |     addq %r11, %r13         # r13 = 0x3333
+                            |     
+                            |     # Test 5: XOR and AND
+0x28e: 30f0ff00000000000000 |     irmovq $0xFF, %rax
+0x298: 30f3ff00000000000000 |     irmovq $0xFF, %rbx
+0x2a2: 6330                 |     xorq %rbx, %rax         # rax = 0
+0x2a4: 30f1cdab000000000000 |     irmovq $0xABCD, %rcx
+0x2ae: 30f2ffff000000000000 |     irmovq $0xFFFF, %rdx
+0x2b8: 6221                 |     andq %rdx, %rcx         # rcx = 0xABCD
+                            |     
+                            |     # Test 6: Loop test
+0x2ba: 30f80300000000000000 |     irmovq $3, %r8          # counter
+0x2c4: 30f90000000000000000 |     irmovq $0, %r9          # accumulator
+0x2ce: 30fa0a00000000000000 |     irmovq $10, %r10        # increment value
+0x2d8:                      | loop:
+0x2d8: 60a9                 |     addq %r10, %r9          # r9 += 10
+0x2da: 30fb0100000000000000 |     irmovq $1, %r11
+0x2e4: 61b8                 |     subq %r11, %r8          # counter--
+0x2e6: 74d802000000000000   |     jne loop                # loop while counter != 0
+                            |     # r9 should be 30
+                            |     
+                            |     # Test 7: Conditional jump (je)
+0x2ef: 30f00500000000000000 |     irmovq $5, %rax
+0x2f9: 30f30500000000000000 |     irmovq $5, %rbx
+0x303: 6130                 |     subq %rbx, %rax         # rax = 0, ZF=1
+0x305: 732103000000000000   |     je equal_branch
+0x30e: 30f10f27000000000000 |     irmovq $9999, %rcx      # Should NOT execute
+0x318: 702b03000000000000   |     jmp done
+0x321:                      | equal_branch:
+0x321: 30f1d204000000000000 |     irmovq $1234, %rcx      # rcx = 1234
+                            |     
+0x32b:                      | done:
+0x32b: 2054                 |     rrmovq %rbp, %rsp
+0x32d: b05f                 |     popq %rbp
+0x32f: 90                   |     ret
+                            | 
+                            | # Stack at high address
+0x1000:                      |     .pos 0x1000
+0x1000:                      | stack:

@@ -1,0 +1,88 @@
+# Comprehensive Y86 test program
+# Tests: conditional moves, branches, ALU ops, stack, memory
+
+    .pos 0
+init:
+    irmovq stack, %rsp      # Initialize stack pointer
+    call main
+    halt
+
+# Test data in memory
+    .pos 0x100
+data1:
+    .quad 0x1111
+data2:
+    .quad 0x2222
+
+# Main test function
+    .pos 0x200
+main:
+    pushq %rbp
+    rrmovq %rsp, %rbp
+    
+    # Test 1: Basic arithmetic
+    irmovq $100, %rax       # rax = 100
+    irmovq $50, %rbx        # rbx = 50
+    addq %rbx, %rax         # rax = 150
+    subq %rbx, %rax         # rax = 100
+    
+    # Test 2: Conditional move (should move)
+    irmovq $0, %rcx
+    irmovq $999, %rdx
+    subq %rcx, %rcx         # Set ZF=1
+    cmove %rdx, %rcx        # rcx should become 999 (ZF=1)
+    
+    # Test 3: Conditional move (should NOT move)
+    irmovq $777, %rsi
+    irmovq $888, %rdi
+    irmovq $1, %r8
+    subq %r8, %r8           # r8 = 0, ZF=1
+    addq %r8, %r8           # r8 = 0, ZF=1
+    irmovq $5, %r9
+    addq %r9, %r8           # r8 = 5, ZF=0
+    cmove %rdi, %rsi        # rsi should stay 777 (ZF=0)
+    
+    # Test 4: Memory operations
+    irmovq data1, %r10
+    mrmovq (%r10), %r11     # r11 = 0x1111
+    irmovq data2, %r12
+    mrmovq (%r12), %r13     # r13 = 0x2222
+    addq %r11, %r13         # r13 = 0x3333
+    
+    # Test 5: XOR and AND
+    irmovq $0xFF, %rax
+    irmovq $0xFF, %rbx
+    xorq %rbx, %rax         # rax = 0
+    irmovq $0xABCD, %rcx
+    irmovq $0xFFFF, %rdx
+    andq %rdx, %rcx         # rcx = 0xABCD
+    
+    # Test 6: Loop test
+    irmovq $3, %r8          # counter
+    irmovq $0, %r9          # accumulator
+    irmovq $10, %r10        # increment value
+loop:
+    addq %r10, %r9          # r9 += 10
+    irmovq $1, %r11
+    subq %r11, %r8          # counter--
+    jne loop                # loop while counter != 0
+    # r9 should be 30
+    
+    # Test 7: Conditional jump (je)
+    irmovq $5, %rax
+    irmovq $5, %rbx
+    subq %rbx, %rax         # rax = 0, ZF=1
+    je equal_branch
+    irmovq $9999, %rcx      # Should NOT execute
+    jmp done
+equal_branch:
+    irmovq $1234, %rcx      # rcx = 1234
+    
+done:
+    rrmovq %rbp, %rsp
+    popq %rbp
+    ret
+
+# Stack at high address
+    .pos 0x1000
+stack:
