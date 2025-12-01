@@ -77,7 +77,7 @@ stack:
 
 #### Output:
 
-
+```
 Program loaded.
 
 ========== CPU State ==========
@@ -91,7 +91,7 @@ Registers:
   %rsp: 0x0000000000000100 (256)
   ...
 ==============================
-
+```
 
 ## Usage Guide
 ### Basic Usage
@@ -126,30 +126,30 @@ Registers:
 ## Writing Y86 Assembly Programs
 ## Instruction Set
 ### Data Movement
-
+```
 irmovq $V, rB         # Immediate to register
 rrmovq rA, rB         # Register to register
 mrmovq D(rB), rA      # Memory to register
 rmmovq rA, D(rB)      # Register to memory
-
+```
 ### Arithmetic & Logic (OPq)
-
+```
 addq rA, rB           # rB = rB + rA
 subq rA, rB           # rB = rB - rA
 andq rA, rB           # rB = rB & rA
 xorq rA, rB           # rB = rB ^ rA
-
+```
 ### Conditional Moves
-
+```
 cmovle rA, rB         # Move if <=
 cmovl  rA, rB         # Move if <
 cmove  rA, rB         # Move if ==
 cmovne rA, rB         # Move if !=
 cmovge rA, rB         # Move if >=
 cmovg  rA, rB         # Move if >
-
+```
 ### Jumps
-
+```
 jmp   Dest            # Unconditional
 jle   Dest            # Jump if <=
 jl    Dest            # Jump if <
@@ -157,19 +157,19 @@ je    Dest            # Jump if ==
 jne   Dest            # Jump if !=
 jge   Dest            # Jump if >=
 jg    Dest            # Jump if >
-
+```
 ### Stack Operations
-
+```
 pushq rA              # Push register onto stack
 popq  rA              # Pop stack into register
 call  Dest            # Call procedure
 ret                   # Return from procedure
-
+```
 ### Control
-
+```
 halt                  # Stop execution
 nop                   # No operation
-
+```
 ### Registers
 
 | Register | Purpose |
@@ -180,22 +180,22 @@ nop                   # No operation
 
 
 ### Assembly Directives
-
+```
 .pos <address>        # Set code/data position
 .align <bytes>        # Align to byte boundary
 .quad <value>         # 8-byte constant
-
+```
 
 ## Complete Example Program
 ```
-#### Array sum program
+# Array sum program
     .pos 0
 init:
     irmovq stack, %rsp      # Set up stack
     call main
     halt
 
-#### Data: array of 4 elements
+# Data: array of 4 elements
     .pos 0x20
     .align 8
 array:
@@ -210,7 +210,7 @@ main:
     call sum
     ret
 
-#### sum(array, length) - returns sum in %rax
+# sum(array, length) - returns sum in %rax
 sum:
     xorq %rax, %rax         # sum = 0
     irmovq $8, %r8          # Element size
