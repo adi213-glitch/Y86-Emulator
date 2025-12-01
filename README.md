@@ -51,7 +51,7 @@ You should see usage instructions.
 ### Step 1: Write Y86 Assembly Code
 Create a file test.ys:
 #### Simple Y86 program - adds two numbers
-
+```
     .pos 0
     irmovq stack, %rsp      # Initialize stack
     call main
@@ -63,7 +63,7 @@ main:
     ret
     .pos 0x100
 stack:
-
+```
 
 ### Step 2: Assemble to Object Code
 
