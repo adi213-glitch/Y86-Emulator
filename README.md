@@ -56,13 +56,11 @@ Create a file test.ys:
     irmovq stack, %rsp      # Initialize stack
     call main
     halt
-
 main:
     irmovq $10, %rax        # rax = 10
     irmovq $20, %rbx        # rbx = 20
     addq %rbx, %rax         # rax = rax + rbx = 30
     ret
-
     .pos 0x100
 stack:
 
