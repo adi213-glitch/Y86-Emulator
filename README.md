@@ -35,8 +35,8 @@ Also look below in this Readme.md for learning a little bit of Y86-64 (Or I shou
 Clone or download the project:
 
 
-`git clone <https://github.com/adi213-glitch/Y86-Emulator>`
-`cd Y86-Emulator`
+- `git clone https://github.com/adi213-glitch/Y86-Emulator`
+- `cd Y86-Emulator`
 
 ### Compile the emulator:
 `g++ y86_emulator.cpp -o y86`
