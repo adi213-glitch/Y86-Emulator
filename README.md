@@ -12,6 +12,7 @@ Also look below in this Readme.md for learning a little bit of Y86-64 (Or I shou
 - All 11 instruction types (halt, nop, moves, ALU ops, jumps, call/ret, push/pop)
 - Conditional moves (cmovXX) and conditional jumps (jXX)
 - Full memory addressing with base+displacement
+- Sequential instruction execution with 6 stages: Fetch, Decode, Execute, Memory, Writeback, PC Update
 
 **Accurate Hardware Simulation**
 - 15 general-purpose 64-bit registers
@@ -247,38 +248,28 @@ stack:
 
 
 ## Debugging Tips
-Check register values: Look at the register dump after execution
+- **Check register values:** Look at the register dump after execution
+- **Inspect memory:** Use `-m` options to see data/code
+- **Verify object code:** Check the `.yo` file for correct encoding
+- **Trace execution:** Add multiple halt points in your code
+- **Start simple:** Test each instruction type individually
 
-Inspect memory: Use -m options to see data/code
-
-Verify object code: Check the .yo file for correct encoding
-
-Trace execution: Add multiple halt points in your code
-
-Start simple: Test each instruction type individually
 
 ## References
-CS:APP Book: Computer Systems: A Programmer's Perspective (3rd Edition)
-
-Chapter 4: Processor Architecture
-
-Figures 4.2, 4.7, 4.18, 4.23
-
-Y86-64 ISA: CS:APP Section 4.1
-
-Simulator Guide: CS:APP3e Guide to Y86-64 Processor Simulators
+- **CS:APP Book:** *Computer Systems: A Programmer's Perspective* (3rd Edition)
+  - Chapter 4: Processor Architecture
+  - Figures 4.2, 4.7, 4.18, 4.23
+- **Y86-64 ISA:** CS:APP Section 4.1
+- **Simulator Guide:** CS:APP3e Guide to Y86-64 Processor Simulators
 
 ## Contributing
 
-### Suggestions and improvements are welcome! Areas for enhancement:
+Suggestions and improvements are welcome! Areas for enhancement:
+- Step-through debugging mode
+- Instruction count/cycle statistics
+- GUI visualization
+- Pipeline simulation
 
-Step-through debugging mode
-
-Instruction count/cycle statistics
-
-GUI visualization
-
-Pipeline simulation
 
 ## License
 Educational project based on CS:APP materials. For academic use.

@@ -1,4 +1,4 @@
-# Comprehensive Y86 test program
+# Y86 test program (different from the one provided in Readme.md)
 # Tests: conditional moves, branches, ALU ops, stack, memory
 
     .pos 0
