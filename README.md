@@ -1,10 +1,12 @@
-### ---Y86-64 Processor Emulator written in C++ ---###
+# Y86-64 Processor Emulator
 
-### Overview:
+*A complete instruction-set simulator written in C++*
+
+## Overview:
 This emulator implements the full Y86-64 ISA, simulating a simplified 64-bit processor architecture. It faithfully executes Y86-64 machine code and provides debugging capabilities to inspect processor state and memory.
 Also look below in this Readme.md for learning a little bit of Y86-64 (Or I should say a very simplistic model of x86 ;) 
 
-### Features
+## Features
 
 **Complete Y86-64 ISA Implementation**
 - All 11 instruction types (halt, nop, moves, ALU ops, jumps, call/ret, push/pop)
@@ -23,32 +25,32 @@ Also look below in this Readme.md for learning a little bit of Y86-64 (Or I shou
 - CPU state display (PC, status, condition codes)
 - Support for `.yo` object code format
 
-### Prerequisites
+## Prerequisites
 C++ Compiler: g++ (C++11 or later)
 Y86 Assembler: yas (provided here)
 Operating System: Linux, macOS, or Windows (with WSL)
 
-### Installation
+## Installation
 Clone or download the project:
 
 
 `git clone <https://github.com/adi213-glitch/Y86-Emulator>`
 `cd Y86-Emulator`
 
-# Compile the emulator:
+### Compile the emulator:
 `g++ y86_emulator.cpp -o y86`
 
-# Verify installation:
+### Verify installation:
 `./y86`
 
 You should see usage instructions.
 
 
-### Quick Start
+## Quick Start
 
-## Step 1: Write Y86 Assembly Code
+### Step 1: Write Y86 Assembly Code
 Create a file test.ys:
-# Simple Y86 program - adds two numbers
+#### Simple Y86 program - adds two numbers
 
     .pos 0
     irmovq stack, %rsp      # Initialize stack
@@ -65,17 +67,17 @@ main:
 stack:
 
 
-## Step 2: Assemble to Object Code
+### Step 2: Assemble to Object Code
 
 `yas test.ys`
 
-# This creates test.yo (object code file).
+#### This creates test.yo (object code file).
 
-## Step 3: Run the Emulator
+### Step 3: Run the Emulator
 
 `./y86 test.yo`
 
-# Output:
+#### Output:
 
 
 Program loaded.
@@ -93,12 +95,12 @@ Registers:
 ==============================
 
 
-### Usage Guide
-# Basic Usage
+## Usage Guide
+### Basic Usage
 
 `./y86 <file.yo> [options]`
 
-## Command-Line Options
+### Command-Line Options
 
 | Option | Description | Example |
 |--------|-------------|---------|
@@ -108,38 +110,38 @@ Registers:
 | `-m <start> <end>` | Dump custom memory range (hex) | `./y86 test.yo -m 0x100 0x200` |
 
 
-### Examples
+## Examples
 
-# Run without memory inspection
+### Run without memory inspection
 `./y86 program.yo`
 
-# Inspect data area after execution
+### Inspect data area after execution
 `./y86 program.yo -m data`
 
-# Inspect specific memory range
+### Inspect specific memory range
 `./y86 program.yo -m 0x18 0x38`
 
-# Inspect all modified memory
+### Inspect all modified memory
 `./y86 program.yo -m all`
 
 
-### Writing Y86 Assembly Programs
+## Writing Y86 Assembly Programs
 ## Instruction Set
-# Data Movement
+### Data Movement
 
 irmovq $V, rB         # Immediate to register
 rrmovq rA, rB         # Register to register
 mrmovq D(rB), rA      # Memory to register
 rmmovq rA, D(rB)      # Register to memory
 
-# Arithmetic & Logic (OPq)
+### Arithmetic & Logic (OPq)
 
 addq rA, rB           # rB = rB + rA
 subq rA, rB           # rB = rB - rA
 andq rA, rB           # rB = rB & rA
 xorq rA, rB           # rB = rB ^ rA
 
-# Conditional Moves
+### Conditional Moves
 
 cmovle rA, rB         # Move if <=
 cmovl  rA, rB         # Move if <
@@ -148,7 +150,7 @@ cmovne rA, rB         # Move if !=
 cmovge rA, rB         # Move if >=
 cmovg  rA, rB         # Move if >
 
-# Jumps
+### Jumps
 
 jmp   Dest            # Unconditional
 jle   Dest            # Jump if <=
@@ -158,19 +160,19 @@ jne   Dest            # Jump if !=
 jge   Dest            # Jump if >=
 jg    Dest            # Jump if >
 
-# Stack Operations
+### Stack Operations
 
 pushq rA              # Push register onto stack
 popq  rA              # Pop stack into register
 call  Dest            # Call procedure
 ret                   # Return from procedure
 
-# Control
+### Control
 
 halt                  # Stop execution
 nop                   # No operation
 
-# Registers
+### Registers
 
 | Register | Purpose |
 |----------|---------|
@@ -179,23 +181,23 @@ nop                   # No operation
 | %rbp | Base pointer (convention) |
 
 
-# Assembly Directives
+### Assembly Directives
 
 .pos <address>        # Set code/data position
 .align <bytes>        # Align to byte boundary
 .quad <value>         # 8-byte constant
 
 
-### Complete Example Program
+## Complete Example Program
 
-# Array sum program
+#### Array sum program
     .pos 0
 init:
     irmovq stack, %rsp      # Set up stack
     call main
     halt
 
-# Data: array of 4 elements
+#### Data: array of 4 elements
     .pos 0x20
     .align 8
 array:
@@ -210,7 +212,7 @@ main:
     call sum
     ret
 
-# sum(array, length) - returns sum in %rax
+#### sum(array, length) - returns sum in %rax
 sum:
     xorq %rax, %rax         # sum = 0
     irmovq $8, %r8          # Element size
@@ -229,14 +231,14 @@ done:
     .pos 0x200
 stack:
 
-## Assemble and run:
+### Assemble and run:
 
 `yas array_sum.ys`
 `./y86 array_sum.yo`
 
-# Expected output: %rax = 0x64 (100 in decimal)
+### Expected output: %rax = 0x64 (100 in decimal)
 
-### Status Codes
+##  Status Codes
 
 | Code | Name | Meaning |
 |------|------|---------|
@@ -246,7 +248,7 @@ stack:
 | INS (4) | Invalid Instruction | Unknown instruction code |
 
 
-### Debugging Tips
+## Debugging Tips
 Check register values: Look at the register dump after execution
 
 Inspect memory: Use -m options to see data/code
@@ -257,7 +259,7 @@ Trace execution: Add multiple halt points in your code
 
 Start simple: Test each instruction type individually
 
-### References
+## References
 CS:APP Book: Computer Systems: A Programmer's Perspective (3rd Edition)
 
 Chapter 4: Processor Architecture
@@ -268,9 +270,9 @@ Y86-64 ISA: CS:APP Section 4.1
 
 Simulator Guide: CS:APP3e Guide to Y86-64 Processor Simulators
 
-### Contributing
+## Contributing
 
-# Suggestions and improvements are welcome! Areas for enhancement:
+### Suggestions and improvements are welcome! Areas for enhancement:
 
 Step-through debugging mode
 
@@ -280,9 +282,9 @@ GUI visualization
 
 Pipeline simulation
 
-### License
+## License
 Educational project based on CS:APP materials. For academic use.
 
-### Author
+## Author
 Aditya - IIT Delhi
 Systems Programming Project - (September 2025- December 2025 )
