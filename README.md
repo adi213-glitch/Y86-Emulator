@@ -26,9 +26,9 @@ Also look below in this Readme.md for learning a little bit of Y86-64 (Or I shou
 - Support for `.yo` object code format
 
 ## Prerequisites
-C++ Compiler: g++ (C++11 or later)
-Y86 Assembler: yas (provided here)
-Operating System: Linux, macOS, or Windows (with WSL)
+- **C++ Compiler:** g++ (C++11 or later)
+- **Y86 Assembler:** yas (provided here)
+- **Operating System:** Linux, macOS, or Windows (with WSL)
 
 ## Installation
 Clone or download the project:
@@ -231,8 +231,8 @@ stack:
 ```
 ### Assemble and run:
 
-`yas array_sum.ys`
-`./y86 array_sum.yo`
+- `yas array_sum.ys`
+- `./y86 array_sum.yo`
 
 ### Expected output: %rax = 0x64 (100 in decimal)
 
