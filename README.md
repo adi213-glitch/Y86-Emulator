@@ -34,10 +34,10 @@ Also look below in this Readme.md for learning a little bit of Y86-64 (Or I shou
 ## Installation
 Clone or download the project:
 
-
-- `git clone https://github.com/adi213-glitch/Y86-Emulator`
-- `cd Y86-Emulator`
-
+```
+git clone https://github.com/adi213-glitch/Y86-Emulator
+cd Y86-Emulator
+```
 ### Compile the emulator:
 `g++ y86_emulator.cpp -o y86`
 
@@ -70,7 +70,7 @@ stack:
 
 `yas test.ys`
 
-#### This creates test.yo (object code file).
+This creates `test.yo` (object code file).
 
 ### Step 3: Run the Emulator
 
@@ -237,6 +237,59 @@ stack:
 
 ### Expected output: %rax = 0x64 (100 in decimal)
 
+## Y86-64 Instruction Encoding Reference
+
+The Y86-64 instructions are encoded as 1-10 byte sequences. The first byte always identifies the instruction type (High 4 bits: `icode`) and function (Low 4 bits: `ifun`).
+
+### Instruction Set
+
+| Instruction | Byte 0 (icode:ifun) | Byte 1 (rA:rB) | Bytes 2-9 (Immediate/Displacement) | Description |
+|-------------|---------------------|----------------|-------------------------------------|-------------|
+| `halt` | `00` | - | - | Halt the processor (Stat: HLT) |
+| `nop` | `10` | - | - | No operation |
+| `rrmovq rA, rB` | `20` | `rA:rB` | - | Register to Register move |
+| `cmovXX rA, rB` | `2x` | `rA:rB` | - | Conditional Move (see Function Codes) |
+| `irmovq V, rB` | `30` | `F:rB` | V (8 bytes) | Immediate to Register move |
+| `rmmovq rA, D(rB)` | `40` | `rA:rB` | D (8 bytes) | Register to Memory move |
+| `mrmovq D(rB), rA` | `50` | `rA:rB` | D (8 bytes) | Memory to Register move |
+| `OPq rA, rB` | `6x` | `rA:rB` | - | Integer Operation (see Function Codes) |
+| `jXX Dest` | `7x` | - | Dest (8 bytes) | Jump to address (see Function Codes) |
+| `call Dest` | `80` | - | Dest (8 bytes) | Push return address and jump |
+| `ret` | `90` | - | - | Pop return address and jump |
+| `pushq rA` | `A0` | `rA:F` | - | Push register onto stack |
+| `popq rA` | `B0` | `rA:F` | - | Pop stack into register |
+
+### Function Codes (ifun)
+
+#### Integer Operations (OPq, icode 6)
+- `60`: `addq`
+- `61`: `subq`
+- `62`: `andq`
+- `63`: `xorq`
+
+#### Branches (jXX, icode 7) & Conditional Moves (cmovXX, icode 2)
+- `0`: `jmp` / `rrmovq` (Unconditional)
+- `1`: `jle` / `cmovle` (Less or Equal)
+- `2`: `jl` / `cmovl` (Less)
+- `3`: `je` / `cmove` (Equal)
+- `4`: `jne` / `cmovne` (Not Equal)
+- `5`: `jge` / `cmovge` (Greater or Equal)
+- `6`: `jg` / `cmovg` (Greater)
+
+### Register Identifiers
+
+| ID | Register | ID | Register |
+|----|----------|----|----------|
+| `0` | `%rax` | `8` | `%r8` |
+| `1` | `%rcx` | `9` | `%r9` |
+| `2` | `%rdx` | `A` | `%r10` |
+| `3` | `%rbx` | `B` | `%r11` |
+| `4` | `%rsp` | `C` | `%r12` |
+| `5` | `%rbp` | `D` | `%r13` |
+| `6` | `%rsi` | `E` | `%r14` |
+| `7` | `%rdi` | `F` | No Register (RNONE) |
+
+
 ##  Status Codes
 
 | Code | Name | Meaning |
@@ -276,4 +329,4 @@ Educational project based on CS:APP materials. For academic use.
 
 ## Author
 Aditya - IIT Delhi
-Systems Programming Project - (September 2025- December 2025 )
+Systems Programming Project - (September 2025-November 2025 )
