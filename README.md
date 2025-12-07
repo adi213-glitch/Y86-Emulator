@@ -319,6 +319,7 @@ The Y86-64 instructions are encoded as 1-10 byte sequences. The first byte alway
 
 Suggestions and improvements are welcome! Areas for enhancement:
 - Step-through debugging mode
+- Currently the work of Assembling the code is outsourced to vendor tools, thus building an assembler for Y86.
 - Instruction count/cycle statistics
 - GUI visualization
 - Pipeline simulation
