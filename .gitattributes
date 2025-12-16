@@ -1,2 +1,3 @@
 # Exclude CS:APP Y86 tools from language statistics
 sim/** linguist-vendored
+.vscode/**linguist-vendored
