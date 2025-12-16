@@ -4,12 +4,12 @@
 #include "y86_emulator.h"
 
 Y86Emulator::Y86Emulator() {
-    // TASK 0: Initialize your hardware.
+    // TASK 0: Initialize the hardware.
     // 1. Resize 'memory' to MEM_SIZE and fill with 0.
     memory.resize(MEM_SIZE,0);
-    // 2. Set 'pc' to 0.
+    // 2. Set 'program counter' to 0.
     pc=0;
-    // 3. Set 'status' to AOK.
+    // 3. Set 'program status' to AOK.
     status=AOK;
     // 4. Clear all registers to 0.
     for(int i =0 ; i< 16; i++) registers[i]=0;
@@ -24,7 +24,7 @@ bool Y86Emulator::load_program(const std::string& filename) {
     
     std::string line;
     while (std::getline(file, line)) {//getline returns true as long as it successfully read something. Once it hits the end of the file, it returns false, and the loop stops.
-        // TASK 1: Implement the parsing logic we discussed.
+        // TASK 1: Implement  parsing logic
 
         // 1. Find the address (before the ':')
         int i =0 ;
@@ -50,7 +50,7 @@ bool Y86Emulator::load_program(const std::string& filename) {
         if(data.empty()) continue;
         // 3. Convert hex strings to bytes.
         uint64_t mem_index = std::stoul(address, nullptr, 16);
-        //Translation: "String TO Unsigned Long". The 16 tells it to read Hexadecimal.
+        // "String TO Unsigned Long". The 16 tells it to read Hexadecimal.
 
         // 4. Store bytes in 'this->memory[address]'.
         for(size_t j = 0; j <data.length() ; j+=2 ){
@@ -82,9 +82,9 @@ void Y86Emulator::run() {
         uint8_t instruction_byte = memory[pc];
 
         // TODO 2: Extract 'icode' (High 4 bits) and 'ifun' (Low 4 bits)
-        // Hint for icode: we need to "shift" the bits to the right.
+        // for icode: we need to "shift" the bits to the right.
 
-        // Hint for ifun: we need to "mask" the bits using the & operator.
+        // for ifun: we need to "mask" the bits using the & operator.
         // 0xF is the mask for 1111 (4 bits).
         int icode = (instruction_byte>>4)  & 0xF;
         int ifun  = instruction_byte & 0xF;
