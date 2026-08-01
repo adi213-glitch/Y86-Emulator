@@ -6,41 +6,100 @@
 #include <string>
 
 
-const int MEM_SIZE = 0x10000;
-
-// --- SYSTEM TYPES  ---
-
-// 1. Register IDs
-// 'enum' gives English names to the numbers 0-14.
-// can write 'reg[RAX]' instead of 'reg[0]'.
-
-enum RegID {
-    RAX=0, RCX =1, RDX =2, RBX =3, RSP=4,RBP=5,RSI=6,RDI=7,R8=8,R9=9,R10=10,R11=11,R12=12,R13=13,R14=14,RNONE=0xF
-};
-// 2. Status Codes
-enum Stat{
-    AOK = 1, // All OK 
-    HLT = 2, // Halt instruction hlt
-    ADR = 3, // Invalid Address 
-    INS = 4  // Invalid Instruction
-};
-// 3. Condition Codes
-// bundle the 3 flags into a simple struct.
-struct ConditionCodes {
-    bool zf; // Zero Flag
-    bool sf; // Sign Flag
-    bool of; // Overflow Flag
-};
-struct PC_data{
-    int pIcode{};
-    bool pCnd{};
-    uint64_t pValP{};
-    uint64_t pValC{};
-    uint64_t pValM{};
-};
+constexpr int MEM_SIZE = 0x10000;
 // --- THE EMULATOR CLASS ---
 class Y86Emulator {
 private:
+    // --- SYSTEM TYPES  ---
+    // 1. Register IDs
+    // 'enum' gives English names to the numbers 0-14.
+    // can write 'reg[RAX]' instead of 'reg[0]'.
+    enum RegID {
+        RAX=0, RCX =1, RDX =2, RBX =3, RSP=4,RBP=5,RSI=6,RDI=7,R8=8,R9=9,R10=10,R11=11,R12=12,R13=13,R14=14,RNONE=0xF
+    };
+    // 2. Status Codes
+    enum Stat{
+        AOK = 1, // All OK 
+        HLT = 2, // Halt instruction hlt
+        ADR = 3, // Invalid Address 
+        INS = 4  // Invalid Instruction
+    };
+    // 3. Condition Codes
+    // bundle the 3 flags into a simple struct.
+    struct ConditionCodes {
+        bool zf; // Zero Flag
+        bool sf; // Sign Flag
+        bool of; // Overflow Flag
+    };
+    // 4. pc reg
+    struct PC_data{
+        int pIcode{};
+        bool pCnd{};
+        uint64_t pValP{};
+        uint64_t pValC{};
+        uint64_t pValM{};
+    };
+    //fetch register
+    struct Fetch_reg{
+        uint64_t predPC{};
+    };
+    //decode reg
+    struct Decode_reg{
+        Stat status{};
+        int icode{};
+        int ifun{};
+        uint64_t rA{};
+        uint64_t rB{};
+        uint64_t valC{};
+        uint64_t valP{};
+    };
+    // execute reg
+    struct Execute_reg{
+        Stat status{};
+        int icode{};
+        int ifun{};
+        uint64_t valC{};
+        uint64_t valA{};
+        uint64_t valB{};
+        uint64_t srcA{};
+        uint64_t srcB{};
+        uint64_t dstE{};
+        uint64_t dstM{};
+    };
+    // memory reg
+    struct Memory_reg{
+        Stat status{};
+        int icode{};
+        bool Cnd{};
+        uint64_t valA{};
+        uint64_t valE{};
+        uint64_t dstE{};
+        uint64_t dstM{};
+    };
+    // writeback reg
+    struct WriteBack_reg{
+        Stat status{};
+        int icode{};
+        uint64_t valM{};
+        uint64_t valE{};
+        uint64_t dstE{};
+        uint64_t dstM{};
+    };
+    //Forwarding logic's state
+    struct FW_state{
+        uint64_t e_dstE{};
+        uint64_t M_dstM{};
+        uint64_t M_dstE{};
+        uint64_t W_dstM{};
+        uint64_t W_dstE{};
+
+        uint64_t e_valE{};
+        uint64_t m_valM{};
+        uint64_t M_valE{};
+        uint64_t W_valM{};
+        uint64_t W_valE{};
+    };
+
     // == HARDWARE STATE ==
     
     // Memory: A vector of bytes. 
@@ -56,13 +115,20 @@ private:
     // Program Counter for seq+
     PC_data pc_data{};
     uint64_t pc{};
+
+    // pipeline registers
+    Fetch_reg F{};
+    Decode_reg D{};
+    Execute_reg E{};
+    Memory_reg M{};
+    WriteBack_reg W{};
+
+    FW_state fw{};
     // Processor Status
     Stat status{};
 
     // Condition Flags
     ConditionCodes cc{};
-
-
 public:
     // Constructor: Initializes the machine (clears memory, resets PC)
     Y86Emulator();
@@ -80,7 +146,8 @@ public:
     void dump_state();
 
     void dump_memory(uint64_t start, uint64_t end);
-
+    void run_fetch ();
+    void run_decodeAndWriteBack();
 };
 
 #endif

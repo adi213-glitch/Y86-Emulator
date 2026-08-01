@@ -67,6 +67,200 @@ bool Y86Emulator::load_program(const std::string& filename) {
     }
     return true;
 }
+void Y86Emulator::run_fetch(){
+    uint64_t f_pc{};
+    // select PC logic 
+    if(M.icode==7 && !M.Cnd) f_pc = M.valA;// mispredicted branch detected
+    else if(W.icode==9 ) f_pc = W.valM; // ret being completeted in WB
+    else f_pc = F.predPC;
+
+    
+    // TODO 1: Read the instruction byte from memory at the current PC.
+    // Safety:  we might want to check if pc < MEM_SIZE first.
+    if(f_pc >= MEM_SIZE) {
+        D.status = ADR;// imem_error
+        return;
+    }
+    uint8_t instruction_byte = memory[f_pc];
+
+    // TODO 2: Extract 'icode' (High 4 bits) and 'ifun' (Low 4 bits)
+    // for icode: we need to "shift" the bits to the right.
+
+    // for ifun: we need to "mask" the bits using the & operator.
+    // 0xF is the mask for 1111 (4 bits).
+    int icode = (instruction_byte>>4)  & 0xF;
+    int ifun  = instruction_byte & 0xF;
+    if(icode > 0xB || icode <0) {
+        D.status= INS;
+        return;
+    }
+    if (icode == 0) { 
+        D.status = HLT;
+        return;
+    }
+    // 2. Control Signal
+    // True for: rrmovq, irmovq, rmmovq, mrmovq, OPq, pushq, popq.
+    // False for: halt, nop, jXX, call, ret.
+    bool need_regids = false;
+    switch(icode) {
+        case 2: case 3: case 4: case 5: case 6: case 0xA: case 0xB:
+            need_regids = true;
+            break;
+        default:
+            need_regids = false;
+            break;
+    }
+
+    // 3. Control Signal
+    // True for: irmovq, rmmovq, mrmovq, jXX, call.
+    bool need_valC =false;
+    switch (icode){
+    case 3: case 4 : case 5 : case 7 : case 8:
+        need_valC=true;
+        break;
+    
+    default:
+        need_valC=false;
+        break;
+    }
+
+    // 4. Variables to hold the fetched data
+    uint64_t rA = RNONE;
+    uint64_t rB = RNONE;
+    uint64_t valC = 0;
+    
+    // Track our position in memory while reading (start 1 byte after PC)
+    uint64_t current_offset = f_pc + 1;
+
+    // 5. Read Register Byte (if needed)
+    if (need_regids) {
+        if(current_offset>=MEM_SIZE){// for safety
+            D.status= ADR;
+            return;
+        }
+        // TODO: Read the byte at 'memory[current_offset]'
+        // TODO: Split it: High 4 bits -> rA, Low 4 bits -> rB
+        uint8_t reg_byte = memory[current_offset];
+        rA = (reg_byte>>4)  & 0xF;
+        rB = reg_byte & 0xF;
+        current_offset++; // Move past the register byte
+    }
+
+    // 6. Read Constant valC (if needed)
+    if (need_valC) {
+        if(current_offset>=MEM_SIZE){// for safety
+            D.status= ADR;
+            return;
+        }
+        // TODO: Read 8 bytes from 'memory[current_offset]'
+        // Y86 is Little Endian. we must reconstruct the uint64_t.
+        for(int i =0 ; i<8; i++){
+            uint8_t single_byte = memory[current_offset+i];
+            uint64_t masked_byte = (uint64_t)single_byte <<56;
+            valC >>= 8;
+            valC = valC | masked_byte;
+        }
+        current_offset += 8; // Move past the 8 bytes
+    }
+    // predict pc logic 
+    switch(icode){
+    case 7: case 8: 
+        F.predPC = valC;
+        break;
+    default:
+        // Calculate  next seqeutnail valP (Address of next sequential instruction)
+        // In hardware, valP is literally PC + 1 + (1 if regids) + (8 if valC)
+        F.predPC = current_offset;
+        break;
+    }
+    // set remaining values in decode reg
+    D.icode = icode;
+    D.ifun = ifun;
+    D.rA = rA;
+    D.rB = rB;
+    D.valC = valC;
+    D.valP = current_offset;
+}
+void Y86Emulator::run_decodeAndWriteBack(){
+    
+    uint64_t srcA =D.rA ;
+    uint64_t srcB = D.rB;
+    // set srcA
+    switch (D.icode){
+    case 2 : case 4: case 6 : case 0xA:
+        srcA = D.rA;
+        break;
+    case 9 : case 0xB:
+        srcA = RSP;
+        break;
+    default:
+        srcA = RNONE;
+        break;
+    }
+    // set srcB
+    switch (D.icode){
+    case 2 : case 4:case 5:case 6:
+        srcB = D.rB;
+        break;
+    case 8 : case 9 : case 0xA: case 0xB:
+        srcB = RSP;
+        break;
+    default:
+        srcB= RNONE;
+        break;
+    }
+    //access reg file
+    uint64_t rvalA = registers[srcA];
+    uint64_t rvalB = registers[srcB];
+    // sel+ fwdA
+    uint64_t d_valA {};
+    //merging valP (job1)
+    if(D.icode == 7 || D.icode==8) d_valA = D.valP;
+    else if(srcA == fw.e_dstE) d_valA = fw.e_valE;
+    else if(srcA == fw.M_dstM) d_valA = fw.m_valM;
+    else if(srcA == fw.M_dstE) d_valA = fw.M_valE;
+    else if(srcA == fw.W_dstM) d_valA = fw.W_valM;
+    else if(srcA == fw.W_dstE) d_valA = fw.W_valE;
+    else d_valA = rvalA;
+    // fwdB
+    uint64_t d_valB {};
+    //merging valP (job1)
+    if(srcB == fw.e_dstE) d_valB = fw.e_valE;
+    else if(srcB == fw.M_dstM) d_valB = fw.m_valM;
+    else if(srcB == fw.M_dstE) d_valB = fw.M_valE;
+    else if(srcB == fw.W_dstM) d_valB = fw.W_valM;
+    else if(srcB == fw.W_dstE) d_valB = fw.W_valE;
+    else d_valB = rvalB;
+
+
+    uint64_t dstE=D.rB;
+    uint64_t dstM=D.rA; 
+    //logic for dste ( doesnt handle cmovxx here in decode (will do later in execute))
+    switch(D.icode){
+        case 2 : case 3: case 6:
+            dstE=D.rB;
+            break;
+        case 8: case 9:case 0xA: case 0xB:
+            dstE=RSP;
+            break;
+        default:
+            dstE= RNONE;
+            break;
+    }
+    //logic for dstm
+    switch(D.icode){
+        case 5 : case 0xB:
+            dstM= D.rA;
+            break;
+        default : 
+            dstM = RNONE;
+            break;
+    }
+    //write back
+    if(dstE != RNONE) registers[dstE]= W.valE;
+    if(dstM != RNONE) registers[dstM]= W.valM;
+    E = {D.status, D.icode, D.ifun , D.valC , d_valA, d_valB, srcA, srcB , dstE, dstM};
+}
 void Y86Emulator::run() {
     // The "main Loop": Keep running as long as status is AOK
 
